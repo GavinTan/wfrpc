@@ -115,7 +115,7 @@
            <enum>QLineEdit::PasswordEchoOnEdit</enum>
           </property>
           <property name="placeholderText">
-           <string>可以为空</string>
+           <string>默认为空</string>
           </property>
          </widget>
         </item>

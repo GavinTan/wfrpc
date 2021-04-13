@@ -1,11 +1,10 @@
 import sys
-from PyQt5.QtGui import QIcon
+from PyQt5.QtGui import QIcon, QDesktopServices
 from PyQt5.QtWidgets import *
 from PyQt5.uic import loadUi
 from PyQt5 import QtCore
 import configparser
 import subprocess
-import threading
 import platform
 import random
 import requests
@@ -44,55 +43,70 @@ class Thread(QtCore.QThread):
             self.download_frp()
 
         if self.run_type == 'run':
-            self.run_cmd = subprocess.Popen([self.frpc_bin_path, '-c', self.frpc_config_path], stdout=subprocess.PIPE, stderr=subprocess.PIPE, close_fds=True)
-            while self.run_cmd.poll() is None:
-                output = self.run_cmd.stdout.readline().decode()
-                if output.strip():
-                    self.trigger.emit(output.strip())
+            try:
+                self.run_cmd = subprocess.Popen([self.frpc_bin_path, '-c', self.frpc_config_path],
+                 stdout=subprocess.PIPE, stderr=subprocess.PIPE, stdin=subprocess.DEVNULL, shell=True)
+                while self.run_cmd.poll() is None:
+                    output = self.run_cmd.stdout.readline().decode()
+                    if output.strip():
+                        self.trigger.emit(output.strip())
+            except Exception as e:
+                log = open(os.path.join(self.frpc_base_path, 'wfrpc.log'), 'a')
+                print(
+                    f"{time.strftime('%Y-%m-%d %H:%M:%S')} {e}",
+                    file=log)
+                log.close()
 
 
     def download_frp(self):
         if not os.path.exists(self.frpc_bin_path):
             os.makedirs(self.frpc_base_path, exist_ok=True)
+            try:
+                log = open(os.path.join(self.frpc_base_path, 'wfrpc.log'), 'a')
+                r = requests.get(self.frp_api_github_url)
+                tmp_path = tempfile.gettempdir()
+                for i in r.json().get('assets'):
+                    frp_download_url = i.get('browser_download_url')
+                    if f'{self.sys_name}_{self.sys_arch}' in frp_download_url:
+                        print(f"{time.strftime('%Y-%m-%d %H:%M:%S')} download {frp_download_url}", file=log)
+                        file_name = os.path.basename(frp_download_url)
+                        file_path = os.path.join(tmp_path, file_name)
+                        frp_download = requests.get(frp_download_url)
+                        with open(file_path, 'wb') as f:
+                            f.write(frp_download.content)
 
-            log = open(os.path.join(self.frpc_base_path, 'wfrpc.log'), 'a')
-            r = requests.get(self.frp_api_github_url)
-            tmp_path = tempfile.gettempdir()
-            for i in r.json().get('assets'):
-                frp_download_url = i.get('browser_download_url')
-                if f'{self.sys_name}_{self.sys_arch}' in frp_download_url:
-                    print(f'download {frp_download_url}', file=log)
-                    file_name = os.path.basename(frp_download_url)
-                    file_path = os.path.join(tmp_path, file_name)
-                    frp_download = requests.get(frp_download_url)
-                    with open(file_path, 'wb') as f:
-                        f.write(frp_download.content)
+                        if file_name.endswith('.tar.gz'):
+                            with tarfile.open(file_path, "r:gz") as f:
+                                f.extractall(tmp_path)
 
-                    if file_name.endswith('.tar.gz'):
-                        with tarfile.open(file_path, "r:gz") as f:
-                            f.extractall(tmp_path)
+                            frp_exe_tmp_path = os.path.join(file_path.split('.tar.gz')[0], 'frpc.exe')
+                            shutil.copy2(frp_exe_tmp_path, self.frpc_base_path)
 
-                        frp_exe_tmp_path = os.path.join(file_path.split('.tar.gz')[0], 'frpc.exe')
-                        shutil.copy2(frp_exe_tmp_path, self.frpc_base_path)
+                        if file_name.endswith('.zip'):
+                            with zipfile.ZipFile(file_path) as f:
+                                f.extractall(tmp_path)
 
-                    if file_name.endswith('.zip'):
-                        with zipfile.ZipFile(file_path) as f:
-                            f.extractall(tmp_path)
+                            frp_exe_tmp_path = os.path.join(file_path.split('.zip')[0], 'frpc.exe')
+                            shutil.copy2(frp_exe_tmp_path, self.frpc_base_path)
+                        self.trigger.emit('download_complete')
+                        return True
+                self.trigger.emit(f"当前系统架构 {self.sys_name}_{self.sys_machine} 没有找到匹配的程序包！\
+                    请手动前往<a href=\"{self.frp_release_github_url}\">Github</a>下载程序，并把frpc.exe解压到<a href=\"file:///{self.frpc_base_path}\">软件目录</a>下。")
 
-                        frp_exe_tmp_path = os.path.join(file_path.split('.zip')[0], 'frpc.exe')
-                        shutil.copy2(frp_exe_tmp_path, self.frpc_base_path)
-                    return True
-            self.trigger.emit(f'当前系统架构 {self.sys_name}_{self.sys_machine} 没有找到匹配的包，请手动下载 {self.frp_release_github_url}')
-            print(
-                f"{time.strftime('%Y-%m-%d %H:%M:%S')} 当前系统架构 {self.sys_name}_{self.sys_machine} 没有找到匹配的包，请手动下载 {self.frp_release_github_url}",
-                file=log)
-            log.close()
+                print(f"{time.strftime('%Y-%m-%d %H:%M:%S')} 当前系统架构 {self.sys_name}_{self.sys_machine} 没有找到匹配的程序包！请手动下载 {self.frp_release_github_url}。",
+                    file=log)
+                log.close()
+            except Exception as e:
+                print(
+                    f"{time.strftime('%Y-%m-%d %H:%M:%S')} {e}", file=log)
+                self.trigger.emit(f'下载frp出错！请手动前往<a href="{self.frp_release_github_url}">Github</a>下载程序，并把frpc.exe解压到<a href="file:///{self.frpc_base_path}">软件目录</a>下。')
 
 
 
 class MainWindow(QMainWindow):
 
     frpc_base_path = os.path.join(os.path.expanduser('~'), '.wfrpc')
+    frpc_bin_path = os.path.join(frpc_base_path, 'frpc.exe')
     frpc_config_path = os.path.join(frpc_base_path, 'frpc.ini')
 
     frpc_config_server_addr = 'nb33.3322.org'
@@ -100,7 +114,6 @@ class MainWindow(QMainWindow):
     frpc_config_server_passwd = ''
 
     frpc_config_list = []
-    a = []
 
     def __init__(self, parent=None):
         super(MainWindow, self).__init__(parent)
@@ -133,6 +146,14 @@ class MainWindow(QMainWindow):
 
         self.statusbar.showMessage('树叶的一生难道只是为了归根吗？')
 
+        def handle_links(url):
+            if not url.scheme():
+                url = QtCore.QUrl.fromLocalFile(url.toString())
+            QDesktopServices.openUrl(url)
+        self.show_log.setOpenLinks(False)
+        self.show_log.anchorClicked.connect(handle_links)
+        # self.show_log.setOpenExternalLinks(True)
+
         self.btn_start_frpc.clicked.connect(self.start_frpc)
         self.btn_stop_frpc.clicked.connect(lambda: self.stop_frpc(show_msg=True))
         self.btn_clear_config.clicked.connect(self.clear_frpc_config)
@@ -148,16 +169,23 @@ class MainWindow(QMainWindow):
         self.download_frpc = Thread(run_type='download')
         self.download_frpc.trigger.connect(self.alert_message)
         self.download_frpc.start()
-
+        
+        self.download_failed = False, '正在后台下载frp中。。。'
+        self.start_frpc_status = True
 
     def alert_message(self, msg):
-        msgbox = QMessageBox()
-        msgbox.setIcon(QMessageBox.Critical)
-        msgbox.setText(msg)
-        msgbox.setTextInteractionFlags(QtCore.Qt.TextSelectableByMouse)
-        msgbox.setWindowTitle('错误')
-        msgbox.exec_()
-        
+        if msg == 'download_complete':
+            if not self.start_frpc_status:
+                QMessageBox.information(self, '提示', 'frp下载完成!')
+        else:
+            self.download_failed = True, msg
+            msgbox = QMessageBox()
+            msgbox.setIcon(QMessageBox.Critical)
+            msgbox.setText(msg)
+            # msgbox.setTextInteractionFlags(QtCore.Qt.TextSelectableByMouse)
+            msgbox.setWindowTitle('错误')
+            msgbox.exec_()
+            
     def show_add_config_dialog(self):
         mw = self.width()
         mx = self.x()
@@ -176,7 +204,7 @@ class MainWindow(QMainWindow):
     def add_frpc_config(self):
         local_ip =  self.add_config_dialog.input_local_ip.text()
         local_port = self.add_config_dialog.input_local_port.text()
-        remote_port = self.add_config_dialog.input_remote_port.text() or str(random.randint(10000,20000))
+        remote_port = self.add_config_dialog.input_remote_port.text() or str(random.randint(20000,30000))
         port_type = self.add_config_dialog.select_port_type.currentText()
 
         if not local_ip:
@@ -192,7 +220,11 @@ class MainWindow(QMainWindow):
                 'remote_port': remote_port,
                 'port_type': port_type
             }
-            self.frpc_config()
+            if self.run_frpc.run_cmd and self.run_frpc.run_cmd.poll() is None:
+                self.stop_frpc()
+                self.start_frpc()
+            else:
+                self.frpc_config()
             QMessageBox.information(self, '提示', '添加配置成功')
             self.add_config_dialog.close()
 
@@ -237,6 +269,12 @@ class MainWindow(QMainWindow):
         log.close()
 
     def start_frpc(self):
+        if self.download_failed[0] or not os.path.exists(self.frpc_bin_path):
+            self.download_frpc.start()
+            self.show_log.append(self.download_failed[1])
+            self.start_frpc_status = False
+            return False
+
         if not self.run_frpc.run_cmd or not self.run_frpc.run_cmd.poll() is None:
             self.frpc_config()
 
@@ -251,11 +289,14 @@ class MainWindow(QMainWindow):
             self.show_log.append(f'{" " * 20}+' + '-' * 60 + '+')
             
             self.run_frpc.start()
+            self.start_frpc_status = True
 
     def stop_frpc(self, show_msg=False):
-        # os.system(f'TASKKILL /F /PID {self.run_frp.pid} /T')
+        # os.system(f'TASKKILL /F /PID {self.run_frpc.run_cmd.pid} /T')
         if self.run_frpc.run_cmd:
-            self.run_frpc.run_cmd.kill()
+            si = subprocess.STARTUPINFO()
+            si.dwFlags |= subprocess.STARTF_USESHOWWINDOW
+            subprocess.call(['taskkill', '/F', '/T', '/PID',  str(self.run_frpc.run_cmd.pid)], startupinfo=si)
             self.run_frpc.run_cmd.terminate()
         
         self.run_frpc.quit()
