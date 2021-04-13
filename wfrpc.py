@@ -255,9 +255,9 @@ class MainWindow(QMainWindow):
 
         if add_frpc_config:
             section = f"{add_frpc_config.get('local_ip')}_{add_frpc_config.get('local_port')}"
-            print(f"{time.strftime('%Y-%m-%d %H:%M:%S')} add frp {section} forwarding configuration", file=log)
 
             if not frpc_config_parser.has_section(section):
+                print(f"{time.strftime('%Y-%m-%d %H:%M:%S')} add frp {section} forwarding configuration", file=log)
                 frpc_config_parser.add_section(section)
 
             frpc_config_parser.set(section, 'local_ip', add_frpc_config.get('local_ip'))
