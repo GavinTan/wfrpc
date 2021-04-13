@@ -128,6 +128,7 @@ class MainWindow(QMainWindow):
         loadUi(bundle_dir + '/ui/main.ui', self)
         self.add_config_dialog = loadUi( bundle_dir + '/ui/add_config_dialog.ui')
 
+        self.add_config_dialog.setWindowIcon(QIcon(bundle_dir + '/icon/3.ico'))
         self.setWindowIcon(QIcon(bundle_dir + '/icon/3.ico'))
         self.tray_icon = QSystemTrayIcon(self)
         # self.tray_icon.setIcon(self.style().standardIcon(QStyle.SP_ComputerIcon))
