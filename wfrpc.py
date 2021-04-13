@@ -66,6 +66,7 @@ class Thread(QtCore.QThread):
                 r = requests.get(self.frp_api_github_url)
                 tmp_path = tempfile.gettempdir()
                 for i in r.json().get('assets'):
+                    self.trigger.emit('download_start')
                     frp_download_url = i.get('browser_download_url')
                     if f'{self.sys_name}_{self.sys_arch}' in frp_download_url:
                         print(f"{time.strftime('%Y-%m-%d %H:%M:%S')} download {frp_download_url}", file=log)
@@ -176,15 +177,20 @@ class MainWindow(QMainWindow):
     def alert_message(self, msg):
         if msg == 'download_complete':
             if not self.start_frpc_status:
+                self.download_failed = False, msg
                 QMessageBox.information(self, '提示', 'frp下载完成!')
+        elif msg == 'download_start':
+            if not self.start_frpc_status:
+                self.download_failed = False, '正在后台下载frp中。。。'
         else:
-            self.download_failed = True, msg
-            msgbox = QMessageBox()
-            msgbox.setIcon(QMessageBox.Critical)
-            msgbox.setText(msg)
-            # msgbox.setTextInteractionFlags(QtCore.Qt.TextSelectableByMouse)
-            msgbox.setWindowTitle('错误')
-            msgbox.exec_()
+            if self.start_frpc_status:
+                self.download_failed = True, msg
+                msgbox = QMessageBox()
+                msgbox.setIcon(QMessageBox.Critical)
+                msgbox.setText(msg)
+                # msgbox.setTextInteractionFlags(QtCore.Qt.TextSelectableByMouse)
+                msgbox.setWindowTitle('错误')
+                msgbox.exec_()
             
     def show_add_config_dialog(self):
         mw = self.width()
