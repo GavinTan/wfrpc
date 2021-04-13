@@ -299,13 +299,14 @@ class MainWindow(QMainWindow):
 
     def stop_frpc(self, show_msg=False):
         # os.system(f'TASKKILL /F /PID {self.run_frpc.run_cmd.pid} /T')
-        if self.run_frpc.run_cmd:
+        if self.run_frpc.run_cmd and self.run_frpc.run_cmd.poll() is None:
             si = subprocess.STARTUPINFO()
             si.dwFlags |= subprocess.STARTF_USESHOWWINDOW
             subprocess.call(['taskkill', '/F', '/T', '/PID',  str(self.run_frpc.run_cmd.pid)], startupinfo=si)
             self.run_frpc.run_cmd.terminate()
-        
-        self.run_frpc.quit()
+            self.show_log.append('frp已停止')
+        if self.run_frpc:
+            self.run_frpc.quit()
         
         if show_msg:
             QMessageBox.information(self, '提示', 'frp已关闭')
