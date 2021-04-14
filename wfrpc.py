@@ -116,6 +116,22 @@ class MainWindow(QMainWindow):
 
     frpc_config_list = []
 
+    wisdom_list = [
+        '树叶的一生难道只是为了归根吗？',
+        '吾所成之事，不可逆也！',
+        '即使一无所有，也要未雨绸缪！',
+        '命运已做出了它的选择！',
+        '荣耀存于心，而非留于形。',
+        '世界既不黑也不白，而是一道精致的灰。',
+        '世间万物，表里如一者，又有几何？',
+        '自负会让每个人都屈膝下跪。',
+        '不要被骄傲，遮蔽了双眼。',
+        '万事都有选择，哪怕是真相也不例外。',
+        '时光就像潮水，它送来了一切，也会带走一切。',
+        '大海原本平静，我们的欲望却会兴风作浪。',
+        '攀登的过程也许漫长，但巅峰的风景是值得的。'
+    ]
+
     def __init__(self, parent=None):
         super(MainWindow, self).__init__(parent)
         if getattr(sys, 'frozen', False):
@@ -146,7 +162,7 @@ class MainWindow(QMainWindow):
         self.tray_icon.show()
         self.tray_icon.activated[QSystemTrayIcon.ActivationReason].connect(self.iconActivated)
 
-        self.statusbar.showMessage('树叶的一生难道只是为了归根吗？')
+        self.statusbar.showMessage(random.choice(self.wisdom_list))
 
         def handle_links(url):
             if not url.scheme():
@@ -155,6 +171,20 @@ class MainWindow(QMainWindow):
         self.show_log.setOpenLinks(False)
         self.show_log.anchorClicked.connect(handle_links)
         # self.show_log.setOpenExternalLinks(True)
+
+        self.load_config()
+        if self.frpc_config_parser.has_section('common'):
+            for i in self.frpc_config_parser.items('common'):
+                if i[0] == 'server_addr':
+                    self.frpc_config_server_addr = i[1]
+                if i[0] == 'server_port':
+                    self.frpc_config_server_port = i[1]
+                if i[0] == 'token':
+                    self.frpc_config_server_passwd = i[1]
+
+        self.input_frp_server_addr.setText(self.frpc_config_server_addr)
+        self.input_frp_server_port.setText(self.frpc_config_server_port)
+        self.input_frp_server_passwd.setText(self.frpc_config_server_passwd)
 
         self.btn_start_frpc.clicked.connect(self.start_frpc)
         self.btn_stop_frpc.clicked.connect(lambda: self.stop_frpc(show_msg=True))
@@ -174,6 +204,10 @@ class MainWindow(QMainWindow):
         
         self.download_failed = False, '正在后台下载frp中。。。'
         self.start_frpc_status = True
+    
+    def load_config(self):
+        self.frpc_config_parser = configparser.ConfigParser()
+        self.frpc_config_parser.read(self.frpc_config_path)
 
     def alert_message(self, msg):
         if msg == 'download_complete':
@@ -236,42 +270,41 @@ class MainWindow(QMainWindow):
             self.add_config_dialog.close()
 
     def frpc_config(self):
+        self.load_config()
         self.frpc_config_server_addr = self.input_frp_server_addr.text()
         self.frpc_config_server_port = self.input_frp_server_port.text()
         self.frpc_config_server_passwd = self.input_frp_server_passwd.text()
         add_frpc_config = self.__dict__.get('add_frpc_config')
-        frpc_config_parser = configparser.ConfigParser()
-        frpc_config_parser.read(self.frpc_config_path)
 
         os.path.exists(self.frpc_config_path) or os.makedirs(self.frpc_base_path, exist_ok=True)
         log = open(os.path.join(self.frpc_base_path, 'wfrpc.log'), 'a')
 
-        if not frpc_config_parser.has_section('common'):
+        if not self.frpc_config_parser.has_section('common'):
             print(f"{time.strftime('%Y-%m-%d %H:%M:%S')} add frp common configuration", file=log)
-            frpc_config_parser.add_section('common')
+            self.frpc_config_parser.add_section('common')
 
-        frpc_config_parser.set('common', 'server_addr', self.frpc_config_server_addr)
-        frpc_config_parser.set('common', 'server_port', self.frpc_config_server_port)
-        frpc_config_parser.set('common', 'token', self.frpc_config_server_passwd)
+        self.frpc_config_parser.set('common', 'server_addr', self.frpc_config_server_addr)
+        self.frpc_config_parser.set('common', 'server_port', self.frpc_config_server_port)
+        self.frpc_config_parser.set('common', 'token', self.frpc_config_server_passwd)
 
         if add_frpc_config:
             section = f"{add_frpc_config.get('local_ip')}_{add_frpc_config.get('local_port')}"
 
-            if not frpc_config_parser.has_section(section):
+            if not self.frpc_config_parser.has_section(section):
                 print(f"{time.strftime('%Y-%m-%d %H:%M:%S')} add frp {section} forwarding configuration", file=log)
-                frpc_config_parser.add_section(section)
+                self.frpc_config_parser.add_section(section)
 
-            frpc_config_parser.set(section, 'local_ip', add_frpc_config.get('local_ip'))
-            frpc_config_parser.set(section, 'local_port', add_frpc_config.get('local_port'))
-            frpc_config_parser.set(section, 'remote_port', add_frpc_config.get('remote_port'))
-            frpc_config_parser.set(section, 'type', add_frpc_config.get('port_type'))
+            self.frpc_config_parser.set(section, 'local_ip', add_frpc_config.get('local_ip'))
+            self.frpc_config_parser.set(section, 'local_port', add_frpc_config.get('local_port'))
+            self.frpc_config_parser.set(section, 'remote_port', add_frpc_config.get('remote_port'))
+            self.frpc_config_parser.set(section, 'type', add_frpc_config.get('port_type'))
                 
-        frpc_config_parser.write(open(self.frpc_config_path, 'w')) 
+        self.frpc_config_parser.write(open(self.frpc_config_path, 'w')) 
 
         self.frpc_config_list.clear()
-        for i in frpc_config_parser.sections():
+        for i in self.frpc_config_parser.sections():
             if i != 'common':
-                self.frpc_config_list.append({k: v for k, v in frpc_config_parser.items(i)})
+                self.frpc_config_list.append({k: v for k, v in self.frpc_config_parser.items(i)})
         
         log.close()
 
@@ -313,7 +346,12 @@ class MainWindow(QMainWindow):
             QMessageBox.information(self, '提示', 'frp已关闭')
 
     def clear_frpc_config(self):
-        os.remove(self.frpc_config_path)
+        self.__dict__.pop('add_frpc_config', True)
+        self.load_config()
+        for i in self.frpc_config_parser.sections():
+            if i != 'common':
+                self.frpc_config_parser.remove_section(i)
+        self.frpc_config_parser.write(open(self.frpc_config_path, 'w'))
         QMessageBox.information(self, '提示', '配置清理完成')
     
     def closeEvent(self, event):
