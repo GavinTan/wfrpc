@@ -191,6 +191,7 @@ class MainWindow(QMainWindow):
         self.btn_clear_config.clicked.connect(self.clear_frpc_config)
         self.btn_add_config.clicked.connect(self.show_add_config_dialog)
         self.btn_run_backgrounder.clicked.connect(self.run_backgrounder)
+        self.btn_edit_config.clicked.connect(lambda: QDesktopServices.openUrl(QtCore.QUrl(f'file:///{self.frpc_config_path}')))
 
         self.add_config_dialog.btn_ok.clicked.connect(self.add_frpc_config)
 

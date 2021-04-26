@@ -130,7 +130,7 @@
           <property name="sizeHint" stdset="0">
            <size>
             <width>30</width>
-            <height>30</height>
+            <height>45</height>
            </size>
           </property>
          </spacer>
@@ -165,7 +165,7 @@
           </property>
           <property name="sizeHint" stdset="0">
            <size>
-            <width>20</width>
+            <width>30</width>
             <height>10</height>
            </size>
           </property>
@@ -189,6 +189,13 @@
          <widget class="QPushButton" name="btn_add_config">
           <property name="text">
            <string>添加转发</string>
+          </property>
+         </widget>
+        </item>
+        <item>
+         <widget class="QPushButton" name="btn_edit_config">
+          <property name="text">
+           <string>编辑配置</string>
           </property>
          </widget>
         </item>
