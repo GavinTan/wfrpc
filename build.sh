@@ -1,1 +1,1 @@
-pyinstaller -Fw --noupx -i ./icon/2.ico --add-data "./ui/*:ui" --add-data "./con/*:icon" wfrpc.py
+pyinstaller -Fw --noupx -i ./icon/2.ico --add-data "./ui/*:ui" --add-data "./icon/*:icon" wfrpc.py
