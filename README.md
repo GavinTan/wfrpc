@@ -10,5 +10,9 @@ pip install pyinstaller requests PyQt5
 
 cd wfrpc
 
-pyinstaller -Fw --noupx -i .\icon\2.ico --add-data ".\\ui\\*;ui" --add-data ".\\icon\*;icon"  wfrpc.py
+# windows
+pyinstaller -Fw --noupx -i .\icon\2.ico --add-data ".\\ui\\*;ui" --add-data ".\\icon\*;icon" wfrpc.py
+
+# mac or linux
+pyinstaller -Fw --noupx -i ./icon/2.ico --add-data "./ui/*:ui" --add-data "./con/*:icon" wfrpc.py
 ```
