@@ -16,6 +16,9 @@ import os
 import time
 
 
+frpc_list = {'Darwin': 'frpc', 'Linux': 'frpc', 'Windows': 'frpc.exe'}
+frpc_bin = frpc_list.get(platform.system(), 'frpc.exe')
+
 class Thread(QtCore.QThread):
     trigger = QtCore.pyqtSignal(str)
 
@@ -25,7 +28,7 @@ class Thread(QtCore.QThread):
     sys_arch = sys_arch_list.get(sys_machine) or sys_machine
 
     frpc_base_path = os.path.join(os.path.expanduser('~'), '.wfrpc')
-    frpc_bin_path = os.path.join(frpc_base_path, 'frpc.exe')
+    frpc_bin_path = os.path.join(frpc_base_path, frpc_bin)
     frpc_config_path = os.path.join(frpc_base_path, 'frpc.ini')
 
     frp_api_github_url = 'https://api.github.com/repos/fatedier/frp/releases/latest'
@@ -45,7 +48,7 @@ class Thread(QtCore.QThread):
         if self.run_type == 'run':
             try:
                 self.run_cmd = subprocess.Popen([self.frpc_bin_path, '-c', self.frpc_config_path],
-                 stdout=subprocess.PIPE, stderr=subprocess.PIPE, stdin=subprocess.DEVNULL, shell=True)
+                 stdout=subprocess.PIPE, stderr=subprocess.PIPE, stdin=subprocess.DEVNULL)
                 while self.run_cmd.poll() is None:
                     output = self.run_cmd.stdout.readline().decode()
                     if output.strip():
@@ -80,19 +83,19 @@ class Thread(QtCore.QThread):
                             with tarfile.open(file_path, "r:gz") as f:
                                 f.extractall(tmp_path)
 
-                            frp_exe_tmp_path = os.path.join(file_path.split('.tar.gz')[0], 'frpc.exe')
+                            frp_exe_tmp_path = os.path.join(file_path.split('.tar.gz')[0], frpc_bin)
                             shutil.copy2(frp_exe_tmp_path, self.frpc_base_path)
 
                         if file_name.endswith('.zip'):
                             with zipfile.ZipFile(file_path) as f:
                                 f.extractall(tmp_path)
 
-                            frp_exe_tmp_path = os.path.join(file_path.split('.zip')[0], 'frpc.exe')
+                            frp_exe_tmp_path = os.path.join(file_path.split('.zip')[0], frpc_bin)
                             shutil.copy2(frp_exe_tmp_path, self.frpc_base_path)
                         self.trigger.emit('download_complete')
                         return True
                 self.trigger.emit(f"当前系统架构 {self.sys_name}_{self.sys_machine} 没有找到匹配的程序包！\
-                    请手动前往<a href=\"{self.frp_release_github_url}\">Github</a>下载程序，并把frpc.exe解压到<a href=\"file:///{self.frpc_base_path}\">软件目录</a>下。")
+                    请手动前往<a href=\"{self.frp_release_github_url}\">Github</a>下载程序，并把{frpc_bin}解压到<a href=\"file:///{self.frpc_base_path}\">软件目录</a>下。")
 
                 print(f"{time.strftime('%Y-%m-%d %H:%M:%S')} 当前系统架构 {self.sys_name}_{self.sys_machine} 没有找到匹配的程序包！请手动下载 {self.frp_release_github_url}。",
                     file=log)
@@ -100,14 +103,14 @@ class Thread(QtCore.QThread):
             except Exception as e:
                 print(
                     f"{time.strftime('%Y-%m-%d %H:%M:%S')} {e}", file=log)
-                self.trigger.emit(f'下载frp出错！请手动前往<a href="{self.frp_release_github_url}">Github</a>下载程序，并把frpc.exe解压到<a href="file:///{self.frpc_base_path}">软件目录</a>下。')
+                self.trigger.emit(f'下载frp出错！请手动前往<a href="{self.frp_release_github_url}">Github</a>下载程序，并把{frpc_bin}解压到<a href="file:///{self.frpc_base_path}">软件目录</a>下。')
 
 
 
 class MainWindow(QMainWindow):
 
     frpc_base_path = os.path.join(os.path.expanduser('~'), '.wfrpc')
-    frpc_bin_path = os.path.join(frpc_base_path, 'frpc.exe')
+    frpc_bin_path = os.path.join(frpc_base_path, frpc_bin)
     frpc_config_path = os.path.join(frpc_base_path, 'frpc.ini')
 
     frpc_config_server_addr = 'nb33.3322.org'
@@ -335,9 +338,10 @@ class MainWindow(QMainWindow):
     def stop_frpc(self, show_msg=False):
         # os.system(f'TASKKILL /F /PID {self.run_frpc.run_cmd.pid} /T')
         if self.run_frpc.run_cmd and self.run_frpc.run_cmd.poll() is None:
-            si = subprocess.STARTUPINFO()
-            si.dwFlags |= subprocess.STARTF_USESHOWWINDOW
-            subprocess.call(['taskkill', '/F', '/T', '/PID',  str(self.run_frpc.run_cmd.pid)], startupinfo=si)
+            if platform.system == 'Windows':
+                si = subprocess.STARTUPINFO()
+                si.dwFlags |= subprocess.STARTF_USESHOWWINDOW
+                subprocess.call(['taskkill', '/F', '/T', '/PID',  str(self.run_frpc.run_cmd.pid)], startupinfo=si)
             self.run_frpc.run_cmd.terminate()
             self.show_log.append('frp已停止')
         if self.run_frpc:
