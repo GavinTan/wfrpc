@@ -1,4 +1,4 @@
-# 一个便捷的frp-linux客户端
+# 一个便捷的frp-linux客户端（终端）
 
 
 
@@ -11,6 +11,6 @@ pip install pyinstaller requests
 
 cd wfrpc
 
-pyinstaller -F wfrp.py
+pyinstaller -F wfrpc.py
 ```
 
