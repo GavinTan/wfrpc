@@ -47,8 +47,8 @@ class Thread(QtCore.QThread):
 
         if self.run_type == 'run':
             try:
-                self.run_cmd = subprocess.Popen([self.frpc_bin_path, '-c', self.frpc_config_path],
-                 stdout=subprocess.PIPE, stderr=subprocess.PIPE, stdin=subprocess.DEVNULL)
+                self.run_cmd = subprocess.Popen(f'{self.frpc_bin_path} -c {self.frpc_config_path}', 
+                stdout=subprocess.PIPE, stderr=subprocess.PIPE, stdin=subprocess.DEVNULL, shell=True)
                 while self.run_cmd.poll() is None:
                     output = self.run_cmd.stdout.readline().decode()
                     if output.strip():
@@ -138,10 +138,10 @@ class MainWindow(QMainWindow):
     def __init__(self, parent=None):
         super(MainWindow, self).__init__(parent)
         if getattr(sys, 'frozen', False):
-            # we are running in a bundle
+            # 打包后的资源路径
             bundle_dir = sys._MEIPASS
         else:
-            # we are running in a normal Python environment
+            # 直接运行脚本资源路径
             bundle_dir = os.path.dirname(os.path.abspath(__file__))
 
         loadUi(bundle_dir + '/ui/main.ui', self)
@@ -338,7 +338,7 @@ class MainWindow(QMainWindow):
     def stop_frpc(self, show_msg=False):
         # os.system(f'TASKKILL /F /PID {self.run_frpc.run_cmd.pid} /T')
         if self.run_frpc.run_cmd and self.run_frpc.run_cmd.poll() is None:
-            if platform.system == 'Windows':
+            if platform.system() == 'Windows':
                 si = subprocess.STARTUPINFO()
                 si.dwFlags |= subprocess.STARTF_USESHOWWINDOW
                 subprocess.call(['taskkill', '/F', '/T', '/PID',  str(self.run_frpc.run_cmd.pid)], startupinfo=si)
