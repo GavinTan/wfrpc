@@ -6,7 +6,8 @@
 ```
 git clone https://github.com/GavinTan/wfrpc.git
 
-pip install pyinstaller requests PyQt5
+# mac下pyqt5 5.15.2以上版本pyinstaller打包无法运行
+pip install pyinstaller requests PyQt5==5.15.2
 
 cd wfrpc
 
