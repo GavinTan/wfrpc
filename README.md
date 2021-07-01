@@ -1,4 +1,4 @@
-# 一个便捷的frp客户端（UI）
+# 一个便捷的frp客户端
 
 
 ## build
@@ -11,8 +11,8 @@ pip install pyinstaller requests PyQt5
 cd wfrpc
 
 # windows
-pyinstaller -Fw --noupx -i .\icon\2.ico --add-data ".\\ui\\*;ui" --add-data ".\\icon\*;icon" wfrpc.py
+pyinstaller -Fw --noupx --clean -y -i .\icon\2.ico --add-data ".\\ui\\*;ui" --add-data ".\\icon\*;icon" wfrpc.py
 
-# mac or linux
-pyinstaller -Fw --noupx -i ./icon/2.ico --add-data "./ui/*:ui" --add-data "./con/*:icon" wfrpc.py
+# mac
+pyinstaller -Fw --noupx --clean -y -i ./icon/2.icns --add-data "./ui/*:ui" --add-data "./icon/*:icon" wfrpc.py
 ```
