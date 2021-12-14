@@ -15,6 +15,7 @@ import signal
 import time
 import subprocess
 import socket
+import psutil
 
 
 log = logging.getLogger()
@@ -33,7 +34,10 @@ parser.add_argument('--lport', required=False, metavar='', help='转发端口, �
 parser.add_argument('--rport', required=False, metavar='', help='指定转发后的端口, 不指定将随机生成, 指定后当与lport数量不对应时将根据指定的端口自动递增', type=str, action='append')
 parser.add_argument('--type', required=False, metavar='', help='指定端口类型 tcp or udp', default='tcp', type=str)
 parser.add_argument('--showdir', required=False, help='查看配置目录', action='store_true')
+parser.add_argument('--showconfig', required=False, help='查看配置', action='store_true')
 parser.add_argument('--clear', required=False, help='清理配置', action='store_true')
+parser.add_argument('--add', required=False, help='添加配置', action='store_true')
+parser.add_argument('--delete', required=False, help='删除配置', action='store_true')
 parser.add_argument('-d', '--daemon', required=False, help='后台运行', action='store_true')
 parser.add_argument('-h', '--help', required=False, help='帮助', action='store_true')
 parser.add_argument('action', default='start', nargs='?', choices=('start', 'stop', 'restart', 'status'))
@@ -191,6 +195,25 @@ class FrpBase:
         for i in frp_config_parser.sections():
             if i != 'common':
                 self.config.append({k:v for k,v in frp_config_parser.items(i)})
+    
+    def remove_config(self):
+        frp_config_parser = configparser.ConfigParser()
+        frp_config_parser.read(self.frp_config_path)
+        
+        for h in self.frp_config_host_list:
+            for lp in self.frp_config_lport_list:
+                section = f'{h}_{lp}'
+                frp_config_parser.remove_section(section)
+        frp_config_parser.write(open(self.frp_config_path, 'w')) 
+                
+    def showconfig(self):
+        self.frp_config()
+        print('\t\t+' + '-' * 27 + 'config' + '-' * 27 + '+')
+        for i in self.config:
+            msg = f"{i.get('local_ip')}:{i.get('local_port')} --> {self.frp_config_server_addr}:{i.get('remote_port')}"
+            n = round((60 - len(msg)) / 2)
+            print(f"\t\t{' ' * n}{msg}{' ' * n}")
+        print('\t\t+' + '-' * 60 + '+')
 
     def main(self):
 
@@ -201,41 +224,41 @@ class FrpBase:
             sys.exit(0)
 
         self.download_frp()
-        self.frp_config()
-        print('\t\t+' + '-' * 27 + 'config' + '-' * 27 + '+')
-        for i in self.config:
-            msg = f"{i.get('local_ip')}:{i.get('local_port')} --> {self.frp_config_server_addr}:{i.get('remote_port')}"
-            n = round((60 - len(msg)) / 2)
-            print(f"\t\t{' ' * n}{msg}{' ' * n}")
-        print('\t\t+' + '-' * 60 + '+')
-
-        subprocess.call([self.frpc_bin, '-c', self.frp_config_path])
+        self.showconfig()
+        
+        return subprocess.call([self.frpc_bin, '-c', self.frp_config_path])
 
 
 def start():
-    if args.daemon:
-        try:
-            daemonize(pidfile=pidfile, stdout='/tmp/wfrpc.log', stderr='/tmp/wfrpc.log')
-        except RuntimeError as e:
-            print(e, file=sys.stderr)
-            raise SystemExit(1)
-        f = FrpBase()
-        f.main()
-    try:
-        with open(pidfile, 'w') as f:
-            print(os.getpid(), file=f)
-        f = FrpBase()
-        f.main()
-    except KeyboardInterrupt:
+    running = False
+    if os.path.exists(pidfile):
         with open(pidfile) as f:
-            os.remove(pidfile)
-        print('\nExit!')
-        sys.exit(0)
+            pid = int(f.read())
+            if psutil.pid_exists(pid):
+                running = True
+                print(f'wfrpc is running: {pid}')
+            else:
+                os.remove(pidfile)
+
+    if not running:
+        if args.daemon:
+            try:
+                daemonize(pidfile=pidfile, stdout='/tmp/wfrpc.log', stderr='/tmp/wfrpc.log')
+            except RuntimeError as e:
+                print(e, file=sys.stderr)
+                raise SystemExit(1)
+        try:
+            f = FrpBase()
+            f.main()
+        except KeyboardInterrupt:
+            print('\nExit!')
+
 
 def stop():
     if os.path.exists(pidfile):
         with open(pidfile) as f:
             os.kill(int(f.read()), signal.SIGTERM)
+        os.remove(pidfile)
     else:
         print('wfrpc not running')
         raise SystemExit(1)
@@ -243,9 +266,14 @@ def stop():
 def status():
     if os.path.exists(pidfile):
         with open(pidfile) as f:
-            print('wfrpc is running: {}'.format(int(f.read())))
+            pid = int(f.read())
+            if psutil.pid_exists(pid):
+                print(f'wfrpc is running: {pid}')
+            else:
+                os.remove(pidfile)
+                print('wfrpc is stopped')
     else:
-        print('wfrpc is stopped')  
+        print('wfrpc is stopped')
         
 if __name__ == '__main__':
     pidfile = '/tmp/wfrpc.pid'
@@ -257,6 +285,14 @@ if __name__ == '__main__':
     if args.showdir:
         print('bin: /usr/local/bin/frpc')
         print(f"config: {os.path.expanduser('~')}/.wfrp/frpc.ini")
+        sys.exit(0)
+    if args.showconfig or args.add:
+        f = FrpBase()
+        f.showconfig()
+        sys.exit(0)
+    if args.delete:
+        f = FrpBase()
+        f.remove_config()
         sys.exit(0)
     if args.action == 'start':
         start()
