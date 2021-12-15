@@ -16,6 +16,7 @@ import time
 import subprocess
 import socket
 import psutil
+import warnings
 
 
 log = logging.getLogger()
@@ -24,6 +25,8 @@ formatter = logging.Formatter('%(asctime)s %(levelname)s %(message)s', datefmt='
 console.setFormatter(formatter)
 log.addHandler(console)
 log.setLevel(logging.INFO)
+
+warnings.filterwarnings("ignore")
 
 
 parser = argparse.ArgumentParser(description=__doc__, add_help=False)
@@ -82,13 +85,14 @@ def daemonize(pidfile, *, stdin='/dev/null',
 
     # Write the PID file
     with open(pidfile,'w') as f:
-        print(os.getpid(),file=f)
+        f.write(str(os.getpid()))
 
     # Arrange to have the PID file removed on exit/signal
     atexit.register(lambda: os.remove(pidfile))
 
     # Signal handler for termination (required)
     def sigterm_handler(signo, frame):
+        print('Exit!')
         raise SystemExit(1)
 
     signal.signal(signal.SIGTERM, sigterm_handler)
@@ -130,7 +134,7 @@ class FrpBase:
 
     def download_frp(self):
         if not os.path.exists(self.frpc_bin):
-            r = requests.get(self.frp_api_github_url)
+            r = requests.get(self.frp_api_github_url, verify=False)
             tmp_path = '/tmp'
             for i in r.json().get('assets'):
                 frp_download_url = i.get('browser_download_url')
@@ -138,7 +142,7 @@ class FrpBase:
                     log.info(f'download {frp_download_url}')
                     file_name = os.path.basename(frp_download_url)
                     file_path = f'{tmp_path}/{file_name}'
-                    frp_download = requests.get(frp_download_url)
+                    frp_download = requests.get(frp_download_url, verify=False)
                     with open(f'{tmp_path}/{file_name}', 'wb') as f:
                         f.write(frp_download.content)
                 
@@ -237,8 +241,6 @@ def start():
             if psutil.pid_exists(pid):
                 running = True
                 print(f'wfrpc is running: {pid}')
-            else:
-                os.remove(pidfile)
 
     if not running:
         if args.daemon:
@@ -258,7 +260,6 @@ def stop():
     if os.path.exists(pidfile):
         with open(pidfile) as f:
             os.kill(int(f.read()), signal.SIGTERM)
-        os.remove(pidfile)
     else:
         print('wfrpc not running')
         raise SystemExit(1)
