@@ -278,7 +278,7 @@ class MainWindow(QMainWindow):
         self.frpc_config_server_addr = self.input_frp_server_addr.text()
         self.frpc_config_server_port = self.input_frp_server_port.text()
         self.frpc_config_server_passwd = self.input_frp_server_passwd.text()
-        add_frpc_config = self.__dict__.get('add_frpc_config')
+        add_frpc_config = self.__dict__.pop('add_frpc_config', None)
 
         os.path.exists(self.frpc_config_path) or os.makedirs(self.frpc_base_path, exist_ok=True)
         log = open(os.path.join(self.frpc_base_path, 'wfrpc.log'), 'a')
