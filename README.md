@@ -6,6 +6,7 @@
 ```
 git clone https://github.com/GavinTan/wfrpc.git
 
+# python3.9及以上版本不支持win7，win7环境运行需要使用python3.9以下版本
 # mac下pyqt5 5.15.2以上版本pyinstaller打包无法运行
 pip install pyinstaller requests PyQt5==5.15.2
 
