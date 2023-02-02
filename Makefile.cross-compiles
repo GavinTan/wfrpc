@@ -20,4 +20,4 @@ app:
 	)
 	@mv ./release/wfrpc_windows_386 ./release/wfrpc_windows_386.exe
 	@mv ./release/wfrpc_windows_amd64 ./release/wfrpc_windows_amd64.exe
-		@mv ./release/wfrpc_windows_arm64 ./release/wfrpc_windows_arm64.exe
+	@mv ./release/wfrpc_windows_arm64 ./release/wfrpc_windows_arm64.exe
