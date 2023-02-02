@@ -28,8 +28,10 @@ jobs:
       - name: Create Tag
         run: |
           version=`./bin/wfrpc --version`
-          git tag $version
-          git push origin $version
+          if ! git tag -l $version; then
+            git tag $version
+            git push origin $version
+          fi
           
       - name: Run GoReleaser
         uses: goreleaser/goreleaser-action@v3
