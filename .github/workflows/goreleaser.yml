@@ -40,3 +40,4 @@ jobs:
           args: release --rm-dist
         env:
           GITHUB_TOKEN: ${{ secrets.ACTION_TOKEN }}
+          GORELEASER_CURRENT_TAG: v1.0.0
