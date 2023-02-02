@@ -32,12 +32,11 @@ jobs:
             git tag $version
             git push origin $version
           fi
-          echo "GORELEASER_CURRENT_TAG=v1.0.0" >> $GITHUB_ENV
           
       - name: Run GoReleaser
-        uses: goreleaser/goreleaser-action@v3
+        uses: goreleaser/goreleaser-action@v4
         with:
           version: latest
-          args: release --rm-dist
+          args: release --clean
         env:
           GITHUB_TOKEN: ${{ secrets.ACTION_TOKEN }}
