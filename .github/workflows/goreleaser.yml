@@ -23,7 +23,7 @@ jobs:
       - name: Create Tag
         run: |
           version=`./bin/wfrpc --version`
-          if ! git tag -l $version == $version; then
+          if [ ! $(git tag -l $version) ]; then
             git tag $version
             git push origin $version
           fi
