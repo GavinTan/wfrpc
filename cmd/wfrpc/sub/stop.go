@@ -1,8 +1,8 @@
 package sub
 
 import (
-	"io/ioutil"
 	"log"
+	"os"
 	"strconv"
 	"strings"
 
@@ -26,7 +26,7 @@ var stopCmd = &cobra.Command{
 }
 
 func stop() {
-	data, err := ioutil.ReadFile(run.PidFile)
+	data, err := os.ReadFile(run.PidFile)
 	if err != nil {
 		log.Fatalln(err)
 	}

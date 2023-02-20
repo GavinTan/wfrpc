@@ -2,7 +2,6 @@ package sub
 
 import (
 	"fmt"
-	"io/ioutil"
 	"log"
 	"os"
 	"strconv"
@@ -34,7 +33,7 @@ func status() bool {
 	_, err := os.Stat(run.PidFile)
 
 	if err == nil {
-		data, err := ioutil.ReadFile(run.PidFile)
+		data, err := os.ReadFile(run.PidFile)
 		if err != nil {
 			log.Fatalln(err)
 		}
